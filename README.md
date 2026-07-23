@@ -71,7 +71,7 @@ Halaman login (saat ini masih mock/simulasi, belum terhubung ke sistem autentika
 - deep-translator (opsional, auto-translate review ke Bahasa Indonesia)
 
 **Data storage**
-- `localStorage` browser — tidak ada database terpisah. Lihat [Bagaimana Data Bekerja](#bagaimana-data-bekerja).
+- `localStorage` browser — tidak ada database terpisah.
 
 ---
 
@@ -126,7 +126,7 @@ venv\Scripts\activate        # Windows
 pip install fastapi uvicorn playwright deep-translator pydantic requests
 playwright install chromium  # sekali aja, download browser headless
 
-python main.py
+python main.py atau uvicorn main:app --reload --port 8000
 ```
 
 Backend berjalan di **`http://localhost:8000`**. Pastikan backend jalan dulu sebelum scraping app baru dari UI.
@@ -175,7 +175,7 @@ Karena ini masih tahap testing, beberapa hal sengaja disederhanakan:
 3. Coba app lain yang lebih populer buat mastiin bukan masalah environment.
 
 **Data hilang setelah refresh / ganti browser**
-Ini normal — data disimpan di `localStorage`, bukan server. Lihat [Bagaimana Data Bekerja](#bagaimana-data-bekerja).
+Ini normal — data disimpan di `localStorage`, bukan server.
 
 **Chart nunjukin angka aneh / kosong**
 Biasanya karena data review-nya terlalu sedikit buat metrik tertentu (misal trend butuh minimal beberapa hari data buat bisa dibandingin).
