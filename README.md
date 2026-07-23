@@ -1,73 +1,194 @@
-# React + TypeScript + Vite
+# ReviewPulse
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**App Review Analytics Dashboard** — scrape, analyze, and understand what users are really saying about your app across the App Store.
 
-Currently, two official plugins are available:
+![ReviewPulse Dashboard](docs/screenshot-overview.png)
+<!-- Ganti/tambahkan screenshot kamu sendiri di path di atas -->
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+> ⚠️ **Status: Testing / Beta.** Project ini masih dalam tahap pengembangan aktif. Beberapa bagian (terutama scraping dan model prediksi) masih bisa berubah. Lihat bagian [Known Limitations](#known-limitations) sebelum dipakai untuk kebutuhan production.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Daftar Isi
 
-## Expanding the ESLint configuration
+- [Fitur](#fitur)
+- [Tech Stack](#tech-stack)
+- [Struktur Project](#struktur-project)
+- [Cara Install & Menjalankan](#cara-install--menjalankan)
+- [Cara Pakai](#cara-pakai)
+- [Bagaimana Data Bekerja](#bagaimana-data-bekerja)
+- [Known Limitations](#known-limitations)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Fitur
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 📊 Overview
+Dashboard utama: rata-rata rating, total review, sentiment score, active reviewers (masing-masing dengan tren dibanding periode sebelumnya), grafik tren rating & sentimen harian, breakdown segmen user, breakdown topik keluhan, alert aktif, review terbaru, ringkasan otomatis ("AI Summary" berbasis template), dan export data (CSV/JSON/Full Report).
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 📝 Reviews
+Daftar semua review dengan filter rating, sentimen, topik (Gameplay/UI-UX/Bugs/Performance/Monetization/Support — dideteksi dari kata kunci di teks), pencarian, dan pagination ("Tampilkan Selanjutnya").
+
+### 👥 Segments
+Segmentasi user otomatis berdasarkan **rating + panjang teks review**:
+
+| Segmen | Kriteria |
+|---|---|
+| Vocal Promoters | Rating ≥4, teks panjang (≥80 karakter) |
+| Quiet Promoters | Rating ≥4, teks pendek |
+| Neutral Reviewers | Rating 3 |
+| Vocal Detractors | Rating ≤2, teks panjang |
+| Quiet Detractors | Rating ≤2, teks pendek |
+
+Bisa ditampilkan sebagai donut chart atau stacked bar chart (toggle), lengkap dengan tabel detail, trend naik/turun, dan pop-up untuk melihat review asli per segmen.
+
+### 🔮 Predictions
+Forecast rating 7/30/90 hari ke depan (regresi linear atas rating historis 30 hari terakhir), lengkap dengan confidence interval dan risk level. "Key Events" dideteksi otomatis dari lonjakan rating harian yang signifikan.
+
+### 🔔 Alerts
+Notifikasi otomatis: penurunan rating signifikan, lonjakan review negatif, lonjakan keluhan bug/crash — semua dihitung dari aturan sederhana atas data review, bukan sistem alerting eksternal.
+
+### 🔐 Login
+Halaman login (saat ini masih mock/simulasi, belum terhubung ke sistem autentikasi sungguhan).
+
+---
+
+## Tech Stack
+
+**Frontend**
+- React + TypeScript + Vite
+- Tailwind CSS
+- React Router (routing & query param)
+- Recharts (semua chart)
+- lucide-react (icon)
+- date-fns (format tanggal)
+
+**Backend (scraper)**
+- Python + FastAPI
+- Playwright (render halaman App Store, karena RSS review resmi Apple sudah tidak bisa diandalkan)
+- deep-translator (opsional, auto-translate review ke Bahasa Indonesia)
+
+**Data storage**
+- `localStorage` browser — tidak ada database terpisah. Lihat [Bagaimana Data Bekerja](#bagaimana-data-bekerja).
+
+---
+
+## Struktur Project
+
+```
+app/
+├── src/
+│   ├── api/            # Layer API — index.ts (semua fungsi getX), types.ts (tipe bersama)
+│   ├── backend/        # Backend Python (FastAPI + Playwright scraper)
+│   ├── components/     # Komponen UI (charts, table, modal, layout)
+│   ├── data/            # Data mock (fallback lama, sebagian besar sudah tidak dipakai)
+│   ├── hooks/           # Custom hooks (useReviews, useRefresh, use-mobile)
+│   ├── Image/           # Aset gambar statis
+│   ├── lib/             # Logic inti — reviewAnalytics.ts, reviewData.ts, exportUtils.ts
+│   ├── pages/           # Halaman (OverviewPage, ReviewsPage, SegmentsPage, dst)
+│   ├── types/           # Tipe TypeScript bersama
+│   ├── App.tsx
+│   └── main.tsx
+├── package.json
+├── vite.config.ts
+└── tailwind.config.js
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Cara Install & Menjalankan
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prasyarat
+- Node.js 18+ dan [pnpm](https://pnpm.io/)
+- Python 3.9+
+- ~300MB ruang kosong (buat download browser headless Playwright)
+
+### 1. Frontend
+
+```bash
+cd app
+pnpm install
+pnpm dev
 ```
+
+Frontend berjalan di `http://localhost:5173` (default Vite).
+
+### 2. Backend (scraper)
+
+```bash
+cd app/src/backend
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
+
+pip install fastapi uvicorn playwright deep-translator pydantic requests
+playwright install chromium  # sekali aja, download browser headless
+
+python main.py
+```
+
+Backend berjalan di **`http://localhost:8000`**. Pastikan backend jalan dulu sebelum scraping app baru dari UI.
+
+---
+
+## Cara Pakai
+
+1. **Tambah app** — buka sidebar, pilih/tambah app yang mau di-tracking lewat App ID App Store-nya (angka 9-10 digit, bisa dicari di URL App Store: `apps.apple.com/id/app/nama-app/id`**`XXXXXXXXX`**).
+2. **Scrape review** — trigger proses scraping (backend harus jalan di `localhost:8000`). Data hasil scrape disimpan otomatis di `localStorage` browser kamu.
+3. **Overview** — lihat ringkasan cepat: rating, sentimen, tren, segmen, topik, dan alert.
+4. **Reviews** — filter & cari review spesifik, tandai topik yang relevan.
+5. **Segments** — lihat siapa aja "Vocal Promoters" vs "Quiet Detractors" dst, klik segmen buat lihat review aslinya.
+6. **Predictions** — lihat proyeksi rating ke depan dan hal-hal signifikan yang perlu diwaspadai.
+7. **Export** — di Overview, unduh data review (CSV/JSON) atau laporan lengkap kapan aja.
+
+---
+
+## Bagaimana Data Bekerja
+
+ReviewPulse **tidak punya database/server backend untuk data** — semua data review hasil scraping disimpan di `localStorage` browser dengan key `reviewpulse_app_{appId}`. Semua angka analytics (rating trend, sentiment, segmen, topik, forecast, dst) **dihitung ulang di sisi frontend** setiap halaman dibuka, dari data mentah itu — bukan di-cache di server manapun.
+
+Konsekuensinya:
+- Data **spesifik per-browser** — buka dari browser/device lain = data kosong sampai scrape ulang.
+- Clear browser data / clear localStorage = semua data review hilang.
+- Cocok untuk personal use / testing, **belum cocok untuk tim yang perlu data tersentralisasi.**
+
+---
+
+## Known Limitations
+
+Karena ini masih tahap testing, beberapa hal sengaja disederhanakan:
+
+- **Bukan model AI/ML beneran.** Forecast, AI Summary, deteksi topik, dan klasifikasi sentimen semuanya heuristik/aturan sederhana (regresi linear, pencocokan kata kunci) — bukan machine learning. Cukup buat gambaran arah tren, jangan dianggap presisi tinggi.
+- **Volume review terbatas.** RSS review resmi Apple sudah tidak bisa diandalkan (sering balikin kosong), jadi scraper sekarang render halaman App Store langsung (Playwright). Konsekuensinya, jumlah review yang bisa diambil per app jauh lebih sedikit dibanding era RSS (puluhan, bukan ratusan).
+- **Deteksi topik & sentimen berbasis kata kunci**, bisa salah tangkap konteks (negasi, sarkasme) sesekali.
+- **Login masih mock**, belum ada autentikasi sungguhan.
+
+---
+
+## Troubleshooting
+
+**Scraping hasilnya 0 review terus**
+1. Pastikan backend jalan (`python main.py`) dan aktif di `localhost:8000`.
+2. Cek Playwright browser sudah ke-install (`playwright install chromium`).
+3. Coba app lain yang lebih populer buat mastiin bukan masalah environment.
+
+**Data hilang setelah refresh / ganti browser**
+Ini normal — data disimpan di `localStorage`, bukan server. Lihat [Bagaimana Data Bekerja](#bagaimana-data-bekerja).
+
+**Chart nunjukin angka aneh / kosong**
+Biasanya karena data review-nya terlalu sedikit buat metrik tertentu (misal trend butuh minimal beberapa hari data buat bisa dibandingin).
+
+---
+
+## Roadmap
+
+- [ ] Autentikasi sungguhan (ganti mock login)
+- [ ] Backend/database tersentralisasi (opsional, buat pemakaian tim)
+- [ ] Perbaikan akurasi deteksi topik & sentimen
+- [ ] Dukungan multi-negara di luar ID & MY
+
+---
+
+<p align="center">Dibuat dengan ❤️ — masih terus dikembangkan.</p>
